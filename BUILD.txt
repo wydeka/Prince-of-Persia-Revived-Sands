@@ -1,0 +1,13 @@
+Build (needs Go 1.24+, no other dependencies):
+  go build -trimpath -ldflags "-s -w -H=windowsgui" -o RevivedSands_Installer.exe .
+  Any OS: set GOOS=windows GOARCH=amd64 CGO_ENABLED=0 and run the same command.
+
+cfg.json (the patch data the installer embeds) is NOT stored in this repository, because it contains
+fragments of the game's own files. It ships inside the released RevivedSands_Installer.exe.
+To build from source, place cfg.json next to the sources (a source archive that includes it is attached
+to the Release as RevivedSands_Installer_source.zip).
+
+Discord link without rebuilding: put the link into discord.txt next to the .exe, or build with
+  -ldflags "-X main.DiscordURL=https://discord.gg/..."
+Tests (engine, against a copy of the game folder):  POP_TEST_DIR=<copy> go test -run TestScenario -v .
+Command line without a window:  RevivedSands_Installer.exe --cli status|install|restore [--malik] [--game "PATH"]

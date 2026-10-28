@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prince of Persia: The Revived Sands (the demo)</title>
+<style>
+:root{--bg:#f6f1e7;--card:#fffdf8;--ink:#2a2118;--mute:#6b5d4b;--line:#d9ccb4;--acc:#9a5b13;--acc-ink:#fff;--warn:#8a2f0c;--warn-bg:#fdf0e6;--ok:#1f6b3a;--log:#201a13;--logink:#e8dcc6}
+@media (prefers-color-scheme:dark){:root{--bg:#17130e;--card:#211b14;--ink:#efe6d4;--mute:#a99a82;--line:#3d3226;--acc:#d99a4e;--acc-ink:#1a1209;--warn:#f0a77f;--warn-bg:#2e1c12;--ok:#7bd49a;--log:#0f0c08;--logink:#e8dcc6}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:1.6rem;line-height:1.2;margin:0 0 4px;font-family:Georgia,serif}
+.sub{color:var(--mute);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.demo{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-weight:600}
+label.f{display:block;font-weight:600;margin-bottom:6px}
+.row{display:flex;gap:8px}
+input[type=text]{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+.state{font-weight:600;margin:12px 0 0}
+.malik{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:600}
+.malik input{margin-top:5px;width:18px;height:18px}
+.warn{color:var(--warn);margin:6px 0 0 28px;font-size:.93rem}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+pre{background:var(--log);color:var(--logink);border-radius:10px;padding:12px;min-height:110px;max-height:240px;overflow:auto;margin:0;font:13px/1.45 Consolas,monospace;white-space:pre-wrap}
+.foot{color:var(--mute);font-size:.9rem;text-align:center;margin-top:18px}
+.foot a{color:var(--acc)}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.err{color:var(--warn);font-weight:600;margin-top:10px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>Prince of Persia: The Revived Sands (the demo)</h1><p class="sub" id="sub"></p></div>
+    <button id="lang">English</button>
+  </div>
+
+  <div class="card demo" id="demo"></div>
+  <div class="card" id="what"></div>
+
+  <div class="card">
+    <label class="f" id="lblGame" for="game"></label>
+    <div class="row"><input type="text" id="game" spellcheck="false"><button id="browse"></button></div>
+    <div class="state" id="state"></div>
+  </div>
+
+  <div class="card">
+    <label class="malik"><input type="checkbox" id="malik"><span id="malikTxt"></span></label>
+    <div class="warn" id="malikWarn"></div>
+  </div>
+
+  <div class="btns" style="margin-bottom:14px">
+    <button class="p" id="install"></button>
+    <button id="restore"></button>
+    <button id="check"></button>
+    <button id="elev" style="display:none"></button>
+    <button id="quit" style="margin-left:auto"></button>
+  </div>
+  <div class="err" id="err"></div>
+  <pre id="log"></pre>
+
+  <div class="foot"><span id="footBy"></span> · <a id="discord" target="_blank" rel="noopener">Discord</a></div>
+</div>
+<script>
+const T="__TOKEN__";
+let L="en"; try{L=localStorage.getItem("lang")||"en";}catch(e){}
+let busy=false, stateKey="st_unknown", info={}, lastErr=null, lastAccess=false, logLines=[];
+const S={ru:{
+ sub:"by wydeka · версия 1.0 (демо)",
+ demo:"ДЕМО-ВЕРСИЯ. Мод сделан только до момента призыва армии царя Соломона. Дальнейшие уровни игры не изменялись.",
+ what:"Что меняет мод: солдаты и щитоносцы быстрее замахиваются, разворачиваются, встают после нокдауна и меньше «зависают» после ударов (сложность через тайминги, а не через здоровье); Принц быстрее приходит в себя после ударов, спотыканий и падений. Внешность Принца остаётся стандартной.",
+ game:"Папка игры", browse:"Обзор…",
+ malik:"Установить модель Малика вместо Принца (экспериментально)",
+ warn:"Модель Малика работает только на уровнях, где в игре есть персонаж Малик. Там, где Малика нет, игра просто вылетает. По умолчанию выключено — решайте сами.",
+ install:"Установить мод", restore:"Вернуть всё назад", check:"Проверить состояние", quit:"Закрыть", elev:"Перезапустить от администратора", lang:"English",
+ st_unknown:"Состояние: не проверено", st_original:"Состояние: мод не установлен (файлы оригинальные)",
+ st_prince:"Состояние: мод установлен (модель Принца)", st_malik:"Состояние: мод установлен (модель Малика)",
+ st_mixed:"Состояние: файлы в неизвестном состоянии. Проверьте целостность файлов в Steam.",
+ st_bad:"Состояние: это не папка игры — укажите папку Prince of Persia Forgotten Sands",
+ st_busy:"Работаю, не закрывайте окно…",
+ c_malik:"Вы включили экспериментальную модель Малика.\n\nОна работает только на уровнях, где в игре есть персонаж Малик; там, где его нет, игра вылетает.\n\nПродолжить установку?",
+ c_install:"Установить мод?\nИгра должна быть закрыта.", c_restore:"Вернуть все файлы игры в исходное состояние?",
+ need:"Укажите папку игры.", discord_missing:"Ссылка на Discord ещё не задана.", done:"Готово.", errp:"Ошибка: ", by:"Автор"},
+en:{
+ sub:"by wydeka · version 1.0 (demo)",
+ demo:"DEMO. The mod covers the game only up to the moment the army of King Solomon is summoned. Later levels are unchanged.",
+ what:"What it changes: soldiers and shield-bearers wind up, turn and get up faster and are stunned for a shorter time after hits (difficulty through timings, not health); the Prince recovers faster after hits, stumbles and falls. The Prince keeps his standard look.",
+ game:"Game folder", browse:"Browse…",
+ malik:"Use Malik's model instead of the Prince (experimental)",
+ warn:"Malik's model works only on levels where Malik exists in the game. Where he is absent, the game simply crashes. Off by default — your choice.",
+ install:"Install mod", restore:"Restore everything", check:"Check state", quit:"Close", elev:"Restart as administrator", lang:"Русский",
+ st_unknown:"State: not checked", st_original:"State: mod not installed (original files)",
+ st_prince:"State: mod installed (Prince model)", st_malik:"State: mod installed (Malik model)",
+ st_mixed:"State: files in an unknown state. Verify game files in Steam.",
+ st_bad:"State: not a game folder — choose the Prince of Persia Forgotten Sands folder",
+ st_busy:"Working, do not close the window…",
+ c_malik:"You enabled the experimental Malik model.\n\nIt works only on levels where Malik exists in the game; where he is absent, the game crashes.\n\nContinue?",
+ c_install:"Install the mod?\nThe game must be closed.", c_restore:"Restore all game files to their original state?",
+ need:"Choose the game folder.", discord_missing:"The Discord link is not set yet.", done:"Done.", errp:"Error: ", by:"by"}};
+const $=id=>document.getElementById(id);
+const q=(path,extra)=>fetch(path+"?t="+T+(extra||"")).then(r=>r.json());
+const enc=encodeURIComponent;
+function render(){
+  const s=S[L]; document.documentElement.lang=L;
+  $("sub").textContent=s.sub; $("demo").textContent=s.demo; $("what").textContent=s.what;
+  $("lblGame").textContent=s.game; $("browse").textContent=s.browse; $("malikTxt").textContent=s.malik;
+  $("malikWarn").textContent=s.warn; $("install").textContent=s.install; $("restore").textContent=s.restore;
+  $("check").textContent=s.check; $("quit").textContent=s.quit; $("elev").textContent=s.elev; $("lang").textContent=s.lang;
+  $("state").textContent=busy?s.st_busy:s[stateKey];
+  $("footBy").textContent=(info.title||"")+" · "+s.by+" "+(info.author||"wydeka");
+  $("log").textContent=logLines.map(x=>x[L]).join("\n");
+  $("log").scrollTop=1e9;
+  const e=$("err"); if(lastErr){e.style.display="block";e.textContent=s.errp+lastErr[L];}else e.style.display="none";
+  $("elev").style.display=lastAccess?"":"none";
+  for(const id of ["install","restore","check","browse","malik","game"]) $(id).disabled=busy;
+}
+const stMap={original:"st_original",prince:"st_prince",malik:"st_malik",mixed:"st_mixed",bad_folder:"st_bad"};
+async function run(kind){
+  if(busy) return;
+  const game=$("game").value.trim();
+  if(!game){alert(S[L].need);return;}
+  const malik=$("malik").checked;
+  if(kind==="install" && !confirm(malik?S[L].c_malik:S[L].c_install)) return;
+  if(kind==="restore" && !confirm(S[L].c_restore)) return;
+  busy=true; lastErr=null; lastAccess=false; render();
+  const r=await q("/api/run","&kind="+kind+"&malik="+(malik?1:0)+"&game="+enc(game));
+  if(!r.ok){busy=false;render();return;}
+  poll();
+}
+async function poll(){
+  const p=await q("/api/poll");
+  logLines=(p.log||[]).map(x=>({ru:x.ru,en:x.en}));
+  busy=p.busy;
+  if(!p.busy){
+    if(p.state) stateKey=stMap[p.state]||"st_mixed";
+    lastErr=p.error?{ru:p.error.ru,en:p.error.en}:null; lastAccess=!!p.access;
+    if(!p.error && logLines.length) logLines.push({ru:S.ru.done,en:S.en.done});
+    render(); return;
+  }
+  render(); setTimeout(poll,400);
+}
+$("install").onclick=()=>run("install");
+$("restore").onclick=()=>run("restore");
+$("check").onclick=()=>run("check");
+$("browse").onclick=async()=>{const r=await q("/api/browse"); if(r.path){$("game").value=r.path;run("check");}};
+$("elev").onclick=async()=>{const r=await q("/api/elevate","&game="+enc($("game").value.trim())); if(r.ok){document.body.innerHTML="<p style='padding:24px'>…</p>";}};
+$("quit").onclick=async()=>{await q("/api/quit"); document.body.innerHTML="<p style='padding:24px;font:16px sans-serif'>"+S[L].done+" ("+S[L].quit+")</p>";};
+$("lang").onclick=()=>{L=L==="ru"?"en":"ru";try{localStorage.setItem("lang",L);}catch(e){}render();};
+$("discord").onclick=(e)=>{if(!info.discord||info.discord.includes("XXXXXXXX")){e.preventDefault();alert(S[L].discord_missing);}};
+setInterval(()=>q("/api/ping").catch(()=>{}),4000);
+(async()=>{
+  info=await q("/api/info");
+  $("game").value=info.game||""; if(info.discord) $("discord").href=info.discord;
+  render(); q("/api/ping");
+  if($("game").value) run("check"); else {stateKey="st_bad";render();}
+})();
+</script>
+</body>
+</html>

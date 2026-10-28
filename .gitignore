@@ -1,0 +1,7 @@
+# game data and build output are not part of the repository
+cfg.json
+*.exe
+*.forge
+*.carve
+*.bin
+discord.txt
