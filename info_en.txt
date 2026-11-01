@@ -1,0 +1,26 @@
+﻿Prince of Persia: The Revived Sands v 1.1.3.11 (Beta)  -  by wydeka
+
+BETA. The mod was tested by its author in one full playthrough and covers the game up to the awakening of the Sand army; later levels are unchanged.
+
+This mod rethinks the game's combat, turning passive enemies into dangerous tactical opponents. It does not change the health of the Prince or the enemies: all difficulty comes from timings, faster animations and advanced AI (through the dinput8.dll library). Every mistake in a fight is punished.
+
+1. Timings and animations (edits inside the game archives)
+• Combat pace: soldiers and sergeants wind up, strike and recover from a strike faster. The window to dodge is shorter.
+• Mobility: enemies turn to the Prince faster, get up faster after a knockdown and strafe more actively.
+• Balance: damage of regular enemies is raised (from 10 to 15). The kick's "domino effect" now knocks down at most 3 targets instead of the whole crowd.
+
+2. Smart AI (dinput8.dll)
+• Against charged attacks: if you hold LMB, the crowd rings the Prince and keeps its distance, and the nearest enemy may strike quickly to break the charge.
+• Tactics: in a mixed crowd mostly the shield-bearers attack; they also take charged hits and do not retreat.
+• Roll punishment: the AI takes into account which side you like to roll to, and after a chain of rolls the nearest enemy strikes almost at once.
+• Pressure: the ring closes in harder when the Prince backs off or kills an enemy (the limit on simultaneous attackers is lifted for a moment). Wounded soldiers retreat and return to the fight more aggressively.
+
+3. Resources
+• Health from vases restores half as much, so every bit of health matters.
+
+In game: F3 turns the smart AI on/off, F5 reloads revived.ini.
+
+Before you continue
+- Close the game.
+- The installer edits files of the Steam version of the game. It checks that they are original first, and writes nothing if something does not match.
+- To remove the mod: Settings > Apps > "Prince of Persia: The Revived Sands" > Uninstall. If anything ever goes wrong: Steam > game Properties > Verify integrity of game files.

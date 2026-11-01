@@ -1,0 +1,6 @@
+﻿Done. Start the game from Steam as usual - nothing else is needed.
+
+In game: F3 turns the smart AI on and off, F5 reloads revived.ini (it lies in the game folder, every setting has a comment).
+
+Discord: https://discord.gg/HRFtZ2sNJs
+GitHub:  https://github.com/wydeka/Prince-of-Persia-Revived-Sands

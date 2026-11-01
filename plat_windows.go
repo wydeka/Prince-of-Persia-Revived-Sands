@@ -54,6 +54,8 @@ func shellExecute(verb, file, args string) bool {
 
 func openBrowser(url string) bool { return shellExecute("open", url, "") }
 
+func openPath(p string) bool { return shellExecute("open", p, "") }
+
 func relaunchElevated(game string) bool {
 	exe, err := os.Executable()
 	if err != nil {

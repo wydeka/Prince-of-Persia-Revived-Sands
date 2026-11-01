@@ -20,13 +20,15 @@ import (
 var uiHTML string
 
 const (
-	ModTitle   = "Prince of Persia: The Revived Sands (the demo)"
-	ModVersion = "1.0"
+	ModTitle   = "Prince of Persia: The Revived Sands"
+	ModVersion = "1.1.3.11 (Beta)"
 	Author     = "wydeka"
 )
 
 // DiscordURL можно переопределить при сборке (-X main.DiscordURL=...) или файлом discord.txt рядом с .exe
 var DiscordURL = "https://discord.gg/HRFtZ2sNJs"
+
+const GithubURL = "https://github.com/wydeka/Prince-of-Persia-Revived-Sands"
 
 type Line struct {
 	RU string `json:"ru"`
@@ -41,6 +43,7 @@ type Srv struct {
 	err      *Line
 	access   bool
 	state    string
+	ai       string
 	lastPing time.Time
 	pinged   bool
 	quit     chan struct{}
@@ -117,7 +120,7 @@ func (s *Srv) addLog(ru, en string) {
 	s.mu.Unlock()
 }
 
-func (s *Srv) runTask(kind, game string, malik bool) {
+func (s *Srv) runTask(kind, game string, o Opts) {
 	var err error
 	func() {
 		defer func() {
@@ -125,27 +128,34 @@ func (s *Srv) runTask(kind, game string, malik bool) {
 				err = fmt.Errorf("%v", r)
 			}
 		}()
-		if kind != "check" {
-			if gameRunning() {
-				err = merr("Игра запущена. Закройте её и повторите.", "The game is running. Close it and try again.")
-				return
+		if kind == "check" {
+			if detectState(game) != "bad_folder" && !dirWritable(game) {
+				s.mu.Lock()
+				s.access = true // подсказать про права администратора заранее
+				s.mu.Unlock()
 			}
-			if err = checkWritable(game); err != nil {
-				return
-			}
-			if kind == "install" {
-				err = doInstall(game, malik, s.addLog)
-			} else {
-				err = doRestore(game, s.addLog)
-			}
+			return
+		}
+		if gameRunning() {
+			err = merr("Игра запущена. Закройте её и повторите.", "The game is running. Close it and try again.")
+			return
+		}
+		if detectState(game) == "bad_folder" {
+			err = merr("Это не папка игры.", "This is not the game folder.")
+			return
+		}
+		if err = checkWritable(game, kind == "restore" || o.Data); err != nil {
+			return
+		}
+		if kind == "install" {
+			err = installAll(game, o, s.addLog)
+		} else {
+			err = restoreAll(game, s.addLog)
 		}
 	}()
-	st := detectState(game)
-	if st == "mixed" {
-		s.diag(game)
-	}
+	st, ai := detectState(game), aiState(game)
 	s.mu.Lock()
-	s.state = st
+	s.state, s.ai = st, ai
 	if err != nil {
 		l := Line{err.Error(), err.Error()}
 		if me, ok := err.(*ModErr); ok {
@@ -193,7 +203,7 @@ func (s *Srv) handler() http.Handler {
 		if game == "" {
 			game = findGame()
 		}
-		jsonOut(w, map[string]any{"game": game, "title": ModTitle, "version": ModVersion, "author": Author, "discord": discordURL()})
+		jsonOut(w, map[string]any{"game": game, "title": ModTitle, "version": ModVersion, "author": Author, "discord": discordURL(), "github": GithubURL})
 	})
 	mux.HandleFunc("/api/run", func(w http.ResponseWriter, r *http.Request) {
 		if !s.auth(w, r) {
@@ -212,10 +222,13 @@ func (s *Srv) handler() http.Handler {
 			jsonOut(w, map[string]any{"ok": false})
 			return
 		}
-		s.busy, s.err, s.access, s.state = true, nil, false, ""
-		s.log = nil
+		s.busy, s.err, s.access, s.state, s.ai = true, nil, false, "", ""
+		if kind != "check" {
+			s.log = nil
+		}
 		s.mu.Unlock()
-		go s.runTask(kind, game, q.Get("malik") == "1")
+		o := Opts{Data: q.Get("data") == "1", AI: q.Get("ai") == "1", Malik: q.Get("malik") == "1", ResetIni: q.Get("reset") == "1"}
+		go s.runTask(kind, game, o)
 		jsonOut(w, map[string]any{"ok": true})
 	})
 	mux.HandleFunc("/api/poll", func(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +237,7 @@ func (s *Srv) handler() http.Handler {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		jsonOut(w, map[string]any{"busy": s.busy, "log": s.log, "error": s.err, "access": s.access, "state": s.state})
+		jsonOut(w, map[string]any{"busy": s.busy, "log": s.log, "error": s.err, "access": s.access, "state": s.state, "ai": s.ai})
 	})
 	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
 		if !s.auth(w, r) {
@@ -240,6 +253,14 @@ func (s *Srv) handler() http.Handler {
 			return
 		}
 		jsonOut(w, map[string]any{"path": browseFolder()})
+	})
+	mux.HandleFunc("/api/open", func(w http.ResponseWriter, r *http.Request) {
+		if !s.auth(w, r) {
+			return
+		}
+		game := strings.Trim(strings.TrimSpace(r.URL.Query().Get("game")), `"`)
+		ok := detectState(game) != "bad_folder" && openPath(game)
+		jsonOut(w, map[string]any{"ok": ok})
 	})
 	mux.HandleFunc("/api/elevate", func(w http.ResponseWriter, r *http.Request) {
 		if !s.auth(w, r) {
@@ -291,36 +312,5 @@ func runGUI(argGame string) {
 				return
 			}
 		}
-	}
-}
-
-// diag: подробно по каждому архиву, когда состояние файлов неизвестно
-func (s *Srv) diag(game string) {
-	head, err := headState(game)
-	switch {
-	case err != nil:
-		s.addLog("Диагностика: не удалось прочитать заголовок архива актёров", "Diagnostics: cannot read the actors archive header")
-	case head == princeOff:
-		s.addLog("Диагностика: порядок записей актёров обычный", "Diagnostics: actors entries order is normal")
-	case head == malikOff:
-		s.addLog("Диагностика: порядок записей актёров изменён (как при модели Малика)", "Diagnostics: actors entries order is swapped (Malik model layout)")
-	default:
-		s.addLog("Диагностика: заголовок архива актёров в неизвестном состоянии", "Diagnostics: actors archive header in an unknown state")
-	}
-	for i := range CFG {
-		t := &CFG[i]
-		o, e1 := quickCheck(game, t, true, false)
-		p1, _ := quickCheck(game, t, false, false)
-		p2, _ := quickCheck(game, t, false, true)
-		ru, en := "не совпадает ни с оригиналом, ни с этим модом (другой патч или версия игры)", "matches neither the original nor this mod (another patch or game version)"
-		switch {
-		case e1 != nil:
-			ru, en = "не удалось прочитать: "+e1.Error(), "cannot read: "+e1.Error()
-		case o:
-			ru, en = "оригинал", "original"
-		case p1 || p2:
-			ru, en = "изменён этим модом", "patched by this mod"
-		}
-		s.addLog("  "+t.Name+" ("+t.Archive+"): "+ru, "  "+t.Name+" ("+t.Archive+"): "+en)
 	}
 }

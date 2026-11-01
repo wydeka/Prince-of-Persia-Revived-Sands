@@ -1,0 +1,6 @@
+﻿Готово. Запускайте игру из Steam как обычно - больше ничего не нужно.
+
+В игре: F3 включает и выключает умный ИИ, F5 перечитывает revived.ini (он лежит в папке игры, у каждой настройки есть комментарий).
+
+Discord: https://discord.gg/HRFtZ2sNJs
+GitHub:  https://github.com/wydeka/Prince-of-Persia-Revived-Sands

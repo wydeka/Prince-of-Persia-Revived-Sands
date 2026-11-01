@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prince of Persia: The Revived Sands (the demo)</title>
+<title>Prince of Persia: The Revived Sands</title>
 <style>
 :root{--bg:#f6f1e7;--card:#fffdf8;--ink:#2a2118;--mute:#6b5d4b;--line:#d9ccb4;--acc:#9a5b13;--acc-ink:#fff;--warn:#8a2f0c;--warn-bg:#fdf0e6;--ok:#1f6b3a;--log:#201a13;--logink:#e8dcc6}
 @media (prefers-color-scheme:dark){:root{--bg:#17130e;--card:#211b14;--ink:#efe6d4;--mute:#a99a82;--line:#3d3226;--acc:#d99a4e;--acc-ink:#1a1209;--warn:#f0a77f;--warn-bg:#2e1c12;--ok:#7bd49a;--log:#0f0c08;--logink:#e8dcc6}}
@@ -12,6 +12,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",sys
 .wrap{max-width:760px;margin:0 auto;padding:24px 16px 40px}
 h1{font-size:1.6rem;line-height:1.2;margin:0 0 4px;font-family:Georgia,serif}
 .sub{color:var(--mute);margin:0 0 16px}
+#what{white-space:pre-line}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
 .demo{background:var(--warn-bg);border-color:var(--warn);color:var(--warn);font-weight:600}
 label.f{display:block;font-weight:600;margin-bottom:6px}
@@ -20,9 +21,14 @@ input[type=text]{flex:1;min-width:0;padding:9px 10px;border:1px solid var(--line
 button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
 button:disabled{opacity:.5;cursor:default}
-.state{font-weight:600;margin:12px 0 0}
-.malik{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:600}
-.malik input{margin-top:5px;width:18px;height:18px}
+.states{margin:12px 0 0}
+.states div{margin:2px 0}
+.states b{font-weight:600}
+.opt{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:600;margin:0 0 10px}
+.opt:last-of-type{margin-bottom:0}
+.opt input{margin-top:5px;width:18px;height:18px}
+.opt small{display:block;font-weight:400;color:var(--mute);font-size:.93rem}
+.sub-opt{margin-left:28px}
 .warn{color:var(--warn);margin:6px 0 0 28px;font-size:.93rem}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 pre{background:var(--log);color:var(--logink);border-radius:10px;padding:12px;min-height:110px;max-height:240px;overflow:auto;margin:0;font:13px/1.45 Consolas,monospace;white-space:pre-wrap}
@@ -30,13 +36,14 @@ pre{background:var(--log);color:var(--logink);border-radius:10px;padding:12px;mi
 .foot a{color:var(--acc)}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .err{color:var(--warn);font-weight:600;margin-top:10px;display:none}
+.note{color:var(--warn);margin:8px 0 14px;display:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div><h1>Prince of Persia: The Revived Sands (the demo)</h1><p class="sub" id="sub"></p></div>
-    <button id="lang">English</button>
+    <div><h1>Prince of Persia: The Revived Sands</h1><p class="sub" id="sub"></p></div>
+    <button id="lang">Русский</button>
   </div>
 
   <div class="card demo" id="demo"></div>
@@ -45,89 +52,114 @@ pre{background:var(--log);color:var(--logink);border-radius:10px;padding:12px;mi
   <div class="card">
     <label class="f" id="lblGame" for="game"></label>
     <div class="row"><input type="text" id="game" spellcheck="false"><button id="browse"></button></div>
-    <div class="state" id="state"></div>
+    <div class="states"><div id="stData"></div><div id="stAI"></div></div>
   </div>
 
   <div class="card">
-    <label class="malik"><input type="checkbox" id="malik"><span id="malikTxt"></span></label>
-    <div class="warn" id="malikWarn"></div>
+    <label class="opt"><input type="checkbox" id="optAI" checked><span><span id="aiTxt"></span><small id="aiSmall"></small></span></label>
+    <label class="opt sub-opt"><input type="checkbox" id="reset"><span><span id="resetTxt"></span></span></label>
+    <label class="opt"><input type="checkbox" id="optData" checked><span><span id="dataTxt"></span><small id="dataSmall"></small></span></label>
+    <label class="opt sub-opt"><input type="checkbox" id="malik"><span><span id="malikTxt"></span><small id="malikWarn"></small></span></label>
   </div>
 
+  <div class="note" id="admin"></div>
   <div class="btns" style="margin-bottom:14px">
     <button class="p" id="install"></button>
     <button id="restore"></button>
     <button id="check"></button>
+    <button id="open"></button>
     <button id="elev" style="display:none"></button>
     <button id="quit" style="margin-left:auto"></button>
   </div>
   <div class="err" id="err"></div>
   <pre id="log"></pre>
 
-  <div class="foot"><span id="footBy"></span> · <a id="discord" target="_blank" rel="noopener">Discord</a></div>
+  <div class="foot"><span id="footBy"></span> · <a id="discord" target="_blank" rel="noopener">Discord</a> · <a id="github" target="_blank" rel="noopener">GitHub</a></div>
 </div>
 <script>
 const T="__TOKEN__";
-let L="en"; try{L=localStorage.getItem("lang")||"en";}catch(e){}
-let busy=false, stateKey="st_unknown", info={}, lastErr=null, lastAccess=false, logLines=[];
+let L=localStorage.getItem("lang")||"en";
+let busy=false, dataKey="d_unknown", aiKey="a_unknown", info={}, lastErr=null, lastAccess=false, logLines=[];
 const S={ru:{
- sub:"by wydeka · версия 1.0 (демо)",
- demo:"ДЕМО-ВЕРСИЯ. Мод сделан только до момента призыва армии царя Соломона. Дальнейшие уровни игры не изменялись.",
- what:"Что меняет мод: солдаты и щитоносцы быстрее замахиваются, разворачиваются, встают после нокдауна и меньше «зависают» после ударов (сложность через тайминги, а не через здоровье); Принц быстрее приходит в себя после ударов, спотыканий и падений. Внешность Принца остаётся стандартной.",
+ sub:"by wydeka · версия 1.1.3.11 (Beta)",
+ demo:"Бета-версия. Мод протестирован автором в одном полном прохождении и сделан до момента пробуждения Песчаной армии; дальнейшие уровни игры не изменялись.",
+ what:"Этот мод переосмысляет боевую систему игры, превращая пассивных врагов в опасных тактических противников. Он не меняет шкалу здоровья Принца и врагов: вся сложность строится на таймингах, ускорении анимаций и продвинутом ИИ (через библиотеку dinput8.dll). Каждая ошибка в бою будет наказана.\n\n1. Тайминги и анимации (правка игровых архивов)\n• Темп боя: солдаты и сержанты быстрее замахиваются, атакуют и выходят из анимации удара. Окно для уклонения стало короче.\n• Подвижность: враги быстрее разворачиваются к Принцу, быстрее встают после нокдауна и активнее ходят боком.\n• Баланс приёмов: урон рядовых врагов увеличен (с 10 до 15). «Эффект домино» от удара ногой теперь сбивает не всю толпу, а максимум 3 цели.\n\n2. Умный ИИ (dinput8.dll)\n• Против заряженных атак: если зажать ЛКМ, толпа обступает Принца кольцом и держит дистанцию, а ближайший враг может быстрым ударом сорвать заряд.\n• Тактика: в смешанной толпе атакуют в основном щитоносцы, они же принимают заряженные удары и не отступают.\n• Наказание за перекаты: ИИ учитывает, в какую сторону вы любите перекатываться, а после цепочки перекатов ближайший враг бьёт почти сразу.\n• Давление: круг смыкается жёстче, если Принц отступает или убивает врага (лимит на одновременные атаки в этот момент снимается). Раненые солдаты отступают и возвращаются в бой агрессивнее.\n\n3. Ресурсы\n• Здоровье из ваз восстанавливается вдвое меньше, поэтому каждая порция ценнее.\n\nВ игре: F3 включает и выключает умный ИИ, F5 перечитывает revived.ini.",
  game:"Папка игры", browse:"Обзор…",
- malik:"Установить модель Малика вместо Принца (экспериментально)",
- warn:"Модель Малика работает только на уровнях, где в игре есть персонаж Малик. Там, где Малика нет, игра просто вылетает. По умолчанию выключено — решайте сами.",
- install:"Установить мод", restore:"Вернуть всё назад", check:"Проверить состояние", quit:"Закрыть", elev:"Перезапустить от администратора", lang:"English",
- st_unknown:"Состояние: не проверено", st_original:"Состояние: мод не установлен (файлы оригинальные)",
- st_prince:"Состояние: мод установлен (модель Принца)", st_malik:"Состояние: мод установлен (модель Малика)",
- st_mixed:"Состояние: файлы в неизвестном состоянии. Проверьте целостность файлов в Steam.",
- st_bad:"Состояние: это не папка игры — укажите папку Prince of Persia Forgotten Sands",
- st_busy:"Работаю, не закрывайте окно…",
+ ai:"Умный ИИ врагов", aiS:"Файлы dinput8.dll и revived.ini в папке игры.",
+ data:"Тайминги врагов и Принца", dataS:"Правки в архивах .forge; «Вернуть всё назад» возвращает оригинал.",
+ malik:"Модель Малика вместо Принца (экспериментально)",
+ warn:"Работает только на уровнях, где в игре есть Малик. Там, где его нет, игра вылетает. По умолчанию выключено.",
+ reset:"Сбросить revived.ini к стандартным настройкам (ваши прежние сохранятся как revived.ini.bak)",
+ install:"Установить", restore:"Вернуть всё назад", check:"Проверить состояние", open:"Открыть папку игры", quit:"Закрыть", elev:"Перезапустить от администратора", lang:"English",
+ d_unknown:"Тайминги: не проверено", d_original:"Тайминги: не установлены (файлы оригинальные)",
+ d_prince:"Тайминги: установлены (модель Принца)", d_malik:"Тайминги: установлены (модель Малика)",
+ d_mixed:"Тайминги: файлы в неизвестном состоянии. Проверьте целостность файлов в Steam.",
+ d_bad:"Это не папка игры - укажите папку Prince of Persia Forgotten Sands",
+ a_unknown:"Умный ИИ: не проверено", a_none:"Умный ИИ: не установлен", a_current:"Умный ИИ: установлен",
+ a_older:"Умный ИИ: стоит другая версия - нажмите «Установить», чтобы обновить",
+ a_foreign:"Умный ИИ: в папке чужой dinput8.dll (установщик сохранит его рядом и вернёт при откате)",
+ busyTxt:"Работаю, не закрывайте окно…",
+ admin:"Папка игры защищена от записи. Чтобы установить или удалить мод, нажмите «Перезапустить от администратора».",
  c_malik:"Вы включили экспериментальную модель Малика.\n\nОна работает только на уровнях, где в игре есть персонаж Малик; там, где его нет, игра вылетает.\n\nПродолжить установку?",
- c_install:"Установить мод?\nИгра должна быть закрыта.", c_restore:"Вернуть все файлы игры в исходное состояние?",
- need:"Укажите папку игры.", discord_missing:"Ссылка на Discord ещё не задана.", done:"Готово.", errp:"Ошибка: ", by:"Автор"},
+ c_install:"Установить выбранное?\nИгра должна быть закрыта.", c_restore:"Убрать мод и вернуть все файлы игры в исходное состояние?",
+ need:"Укажите папку игры.", none:"Выберите, что устанавливать.", discord_missing:"Ссылка на Discord ещё не задана.", done:"Готово.", errp:"Ошибка: ", by:"Автор"},
 en:{
- sub:"by wydeka · version 1.0 (demo)",
- demo:"DEMO. The mod covers the game only up to the moment the army of King Solomon is summoned. Later levels are unchanged.",
- what:"What it changes: soldiers and shield-bearers wind up, turn and get up faster and are stunned for a shorter time after hits (difficulty through timings, not health); the Prince recovers faster after hits, stumbles and falls. The Prince keeps his standard look.",
+ sub:"by wydeka · version 1.1.3.11 (Beta)",
+ demo:"BETA. The mod was tested by its author in one full playthrough and covers the game up to the awakening of the Sand army; later levels are unchanged.",
+ what:"This mod rethinks the game's combat, turning passive enemies into dangerous tactical opponents. It does not change the health of the Prince or the enemies: all difficulty comes from timings, faster animations and advanced AI (through the dinput8.dll library). Every mistake in a fight is punished.\n\n1. Timings and animations (edits inside the game archives)\n• Combat pace: soldiers and sergeants wind up, strike and recover from a strike faster. The window to dodge is shorter.\n• Mobility: enemies turn to the Prince faster, get up faster after a knockdown and strafe more actively.\n• Balance: damage of regular enemies is raised (from 10 to 15). The kick's \"domino effect\" now knocks down at most 3 targets instead of the whole crowd.\n\n2. Smart AI (dinput8.dll)\n• Against charged attacks: if you hold LMB, the crowd rings the Prince and keeps its distance, and the nearest enemy may strike quickly to break the charge.\n• Tactics: in a mixed crowd mostly the shield-bearers attack; they also take charged hits and do not retreat.\n• Roll punishment: the AI takes into account which side you like to roll to, and after a chain of rolls the nearest enemy strikes almost at once.\n• Pressure: the ring closes in harder when the Prince backs off or kills an enemy (the limit on simultaneous attackers is lifted for a moment). Wounded soldiers retreat and return to the fight more aggressively.\n\n3. Resources\n• Health from vases restores half as much, so every bit of health matters.\n\nIn game: F3 turns the smart AI on/off, F5 reloads revived.ini.",
  game:"Game folder", browse:"Browse…",
+ ai:"Smart enemy AI", aiS:"The dinput8.dll and revived.ini files in the game folder.",
+ data:"Enemy and Prince timings", dataS:"Edits inside the .forge archives; \"Restore everything\" brings the originals back.",
  malik:"Use Malik's model instead of the Prince (experimental)",
- warn:"Malik's model works only on levels where Malik exists in the game. Where he is absent, the game simply crashes. Off by default — your choice.",
- install:"Install mod", restore:"Restore everything", check:"Check state", quit:"Close", elev:"Restart as administrator", lang:"Русский",
- st_unknown:"State: not checked", st_original:"State: mod not installed (original files)",
- st_prince:"State: mod installed (Prince model)", st_malik:"State: mod installed (Malik model)",
- st_mixed:"State: files in an unknown state. Verify game files in Steam.",
- st_bad:"State: not a game folder — choose the Prince of Persia Forgotten Sands folder",
- st_busy:"Working, do not close the window…",
+ warn:"Works only on levels where Malik exists in the game. Where he is absent, the game crashes. Off by default.",
+ reset:"Reset revived.ini to the default settings (your previous one is saved as revived.ini.bak)",
+ install:"Install", restore:"Restore everything", check:"Check state", open:"Open game folder", quit:"Close", elev:"Restart as administrator", lang:"Русский",
+ d_unknown:"Timings: not checked", d_original:"Timings: not installed (original files)",
+ d_prince:"Timings: installed (Prince model)", d_malik:"Timings: installed (Malik model)",
+ d_mixed:"Timings: files in an unknown state. Verify game files in Steam.",
+ d_bad:"Not a game folder - choose the Prince of Persia Forgotten Sands folder",
+ a_unknown:"Smart AI: not checked", a_none:"Smart AI: not installed", a_current:"Smart AI: installed",
+ a_older:"Smart AI: another version is installed - press Install to update",
+ a_foreign:"Smart AI: a foreign dinput8.dll is in the folder (the installer will keep it next to it and put it back on restore)",
+ busyTxt:"Working, do not close the window…",
+ admin:"The game folder is write-protected. To install or remove the mod, press \"Restart as administrator\".",
  c_malik:"You enabled the experimental Malik model.\n\nIt works only on levels where Malik exists in the game; where he is absent, the game crashes.\n\nContinue?",
- c_install:"Install the mod?\nThe game must be closed.", c_restore:"Restore all game files to their original state?",
- need:"Choose the game folder.", discord_missing:"The Discord link is not set yet.", done:"Done.", errp:"Error: ", by:"by"}};
+ c_install:"Install the selected parts?\nThe game must be closed.", c_restore:"Remove the mod and restore all game files to their original state?",
+ need:"Choose the game folder.", none:"Choose what to install.", discord_missing:"The Discord link is not set yet.", done:"Done.", errp:"Error: ", by:"by"}};
 const $=id=>document.getElementById(id);
 const q=(path,extra)=>fetch(path+"?t="+T+(extra||"")).then(r=>r.json());
 const enc=encodeURIComponent;
 function render(){
   const s=S[L]; document.documentElement.lang=L;
   $("sub").textContent=s.sub; $("demo").textContent=s.demo; $("what").textContent=s.what;
-  $("lblGame").textContent=s.game; $("browse").textContent=s.browse; $("malikTxt").textContent=s.malik;
-  $("malikWarn").textContent=s.warn; $("install").textContent=s.install; $("restore").textContent=s.restore;
-  $("check").textContent=s.check; $("quit").textContent=s.quit; $("elev").textContent=s.elev; $("lang").textContent=s.lang;
-  $("state").textContent=busy?s.st_busy:s[stateKey];
+  $("lblGame").textContent=s.game; $("browse").textContent=s.browse;
+  $("aiTxt").textContent=s.ai; $("aiSmall").textContent=s.aiS; $("dataTxt").textContent=s.data; $("dataSmall").textContent=s.dataS;
+  $("malikTxt").textContent=s.malik; $("malikWarn").textContent=s.warn; $("resetTxt").textContent=s.reset;
+  $("install").textContent=s.install; $("restore").textContent=s.restore; $("check").textContent=s.check;
+  $("open").textContent=s.open; $("quit").textContent=s.quit; $("elev").textContent=s.elev; $("lang").textContent=s.lang;
+  $("stData").textContent=busy?s.busyTxt:s[dataKey]; $("stAI").textContent=busy?"":s[aiKey];
   $("footBy").textContent=(info.title||"")+" · "+s.by+" "+(info.author||"wydeka");
   $("log").textContent=logLines.map(x=>x[L]).join("\n");
   $("log").scrollTop=1e9;
   const e=$("err"); if(lastErr){e.style.display="block";e.textContent=s.errp+lastErr[L];}else e.style.display="none";
+  const a=$("admin"); a.textContent=s.admin; a.style.display=lastAccess?"block":"none";
   $("elev").style.display=lastAccess?"":"none";
-  for(const id of ["install","restore","check","browse","malik","game"]) $(id).disabled=busy;
+  for(const id of ["install","restore","check","browse","open","optAI","optData","reset","game"]) $(id).disabled=busy;
+  $("malik").disabled=busy||!$("optData").checked;
+  $("install").disabled=busy||(!$("optAI").checked&&!$("optData").checked);
 }
-const stMap={original:"st_original",prince:"st_prince",malik:"st_malik",mixed:"st_mixed",bad_folder:"st_bad"};
+const dMap={original:"d_original",prince:"d_prince",malik:"d_malik",mixed:"d_mixed",bad_folder:"d_bad"};
+const aMap={none:"a_none",current:"a_current",older:"a_older",foreign:"a_foreign"};
 async function run(kind){
   if(busy) return;
   const game=$("game").value.trim();
   if(!game){alert(S[L].need);return;}
-  const malik=$("malik").checked;
+  const ai=$("optAI").checked, data=$("optData").checked, malik=data&&$("malik").checked;
+  if(kind==="install" && !ai && !data){alert(S[L].none);return;}
   if(kind==="install" && !confirm(malik?S[L].c_malik:S[L].c_install)) return;
   if(kind==="restore" && !confirm(S[L].c_restore)) return;
   busy=true; lastErr=null; lastAccess=false; render();
-  const r=await q("/api/run","&kind="+kind+"&malik="+(malik?1:0)+"&game="+enc(game));
+  const r=await q("/api/run","&kind="+kind+"&ai="+(ai?1:0)+"&data="+(data?1:0)+"&malik="+(malik?1:0)+"&reset="+($("reset").checked?1:0)+"&game="+enc(game));
   if(!r.ok){busy=false;render();return;}
   poll();
 }
@@ -136,9 +168,12 @@ async function poll(){
   logLines=(p.log||[]).map(x=>({ru:x.ru,en:x.en}));
   busy=p.busy;
   if(!p.busy){
-    if(p.state) stateKey=stMap[p.state]||"st_mixed";
+    if(p.state) dataKey=dMap[p.state]||"d_mixed";
+    if(p.ai) aiKey=aMap[p.ai]||"a_unknown";
+    if(p.state==="bad_folder") aiKey="a_unknown";
     lastErr=p.error?{ru:p.error.ru,en:p.error.en}:null; lastAccess=!!p.access;
     if(!p.error && logLines.length) logLines.push({ru:S.ru.done,en:S.en.done});
+    $("reset").checked=false;
     render(); return;
   }
   render(); setTimeout(poll,400);
@@ -147,16 +182,18 @@ $("install").onclick=()=>run("install");
 $("restore").onclick=()=>run("restore");
 $("check").onclick=()=>run("check");
 $("browse").onclick=async()=>{const r=await q("/api/browse"); if(r.path){$("game").value=r.path;run("check");}};
+$("open").onclick=()=>q("/api/open","&game="+enc($("game").value.trim()));
 $("elev").onclick=async()=>{const r=await q("/api/elevate","&game="+enc($("game").value.trim())); if(r.ok){document.body.innerHTML="<p style='padding:24px'>…</p>";}};
 $("quit").onclick=async()=>{await q("/api/quit"); document.body.innerHTML="<p style='padding:24px;font:16px sans-serif'>"+S[L].done+" ("+S[L].quit+")</p>";};
-$("lang").onclick=()=>{L=L==="ru"?"en":"ru";try{localStorage.setItem("lang",L);}catch(e){}render();};
+$("lang").onclick=()=>{L=L==="ru"?"en":"ru";localStorage.setItem("lang",L);render();};
+$("optAI").onchange=render; $("optData").onchange=render;
 $("discord").onclick=(e)=>{if(!info.discord||info.discord.includes("XXXXXXXX")){e.preventDefault();alert(S[L].discord_missing);}};
 setInterval(()=>q("/api/ping").catch(()=>{}),4000);
 (async()=>{
   info=await q("/api/info");
-  $("game").value=info.game||""; if(info.discord) $("discord").href=info.discord;
+  $("game").value=info.game||""; if(info.discord) $("discord").href=info.discord; if(info.github) $("github").href=info.github;
   render(); q("/api/ping");
-  if($("game").value) run("check"); else {stateKey="st_bad";render();}
+  if($("game").value) run("check"); else {dataKey="d_bad";render();}
 })();
 </script>
 </body>

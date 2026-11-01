@@ -20,7 +20,7 @@ const (
 	headA         = "DataPC_actors.forge"
 	princeOff     = 2809856
 	malikOff      = 194641920
-	gameExe       = "Prince_of_Persia.exe"
+	gameExe       = "Prince of Persia.exe" // в старой версии было Prince_of_Persia.exe - такого процесса нет, и запущенная игра не замечалась
 )
 
 var requiredFiles = []string{"DataPC.forge", "DataPC_actors.forge", "DataPC_01-03.forge"}
@@ -80,7 +80,6 @@ func (s *Slot) UnmarshalJSON(b []byte) error {
 
 type Job struct {
 	Name         string `json:"name"`
-	Role         string `json:"role"`
 	Archive      string `json:"archive"`
 	Entry        int64  `json:"entry"`
 	IndexPos     *int   `json:"index_pos"`
@@ -93,8 +92,6 @@ type Job struct {
 	RestoreSegs  []Seg  `json:"restore_segs"`
 	SlotsApply   []Slot `json:"slots_apply"`
 	SlotsRestore []Slot `json:"slots_restore"`
-	// AltApply: куски прежних версий мода (для отката мода, установленного старой сборкой)
-	AltApply []Seg `json:"alt_apply"`
 }
 
 var CFG []Job
@@ -106,9 +103,6 @@ func loadCfg() {
 }
 
 func role(t *Job) string {
-	if t.Role != "" {
-		return t.Role
-	}
 	if t.Archive == headA && t.Entry == princeOff {
 		return "prince"
 	}
@@ -118,31 +112,12 @@ func role(t *Job) string {
 	return "common"
 }
 
-// jobsFor: обычная установка - общие правки + стандартная модель Принца (без правок внешности).
-// С моделью Малика - общие правки + записи Принца и Малика (как в патче AW) + обмен в заголовке.
 func jobsFor(malik bool) []*Job {
 	var r []*Job
 	for i := range CFG {
-		switch role(&CFG[i]) {
-		case "common":
+		if role(&CFG[i]) != "malik" || malik {
 			r = append(r, &CFG[i])
-		case "prince", "malik":
-			if malik {
-				r = append(r, &CFG[i])
-			}
-		case "prince_std":
-			if !malik {
-				r = append(r, &CFG[i])
-			}
 		}
-	}
-	return r
-}
-
-func allJobs() []*Job {
-	var r []*Job
-	for i := range CFG {
-		r = append(r, &CFG[i])
 	}
 	return r
 }
@@ -232,22 +207,6 @@ func segsOf(t *Job, apply bool) (segs, other []Seg, slots []Slot) {
 	return t.RestoreSegs, t.ApplySegs, t.SlotsRestore
 }
 
-// segMatches: кусок в архиве совпадает с ожидаемым. При откате (apply=false) ожидаем «установленный мод»:
-// текущая версия либо одна из прежних версий этого куска.
-func segMatches(t *Job, apply bool, got []byte, want Seg) bool {
-	if bytes.Equal(got, want.Data) {
-		return true
-	}
-	if !apply {
-		for _, a := range t.AltApply {
-			if a.Start == want.Start && a.Length == want.Length && bytes.Equal(got, a.Data) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // quickCheck: запись находится в состоянии «до» операции (читает только нужные куски).
 func quickCheck(game string, t *Job, apply, remap bool) (bool, error) {
 	f, err := os.Open(filepath.Join(game, t.Archive))
@@ -274,7 +233,7 @@ func quickCheck(game string, t *Job, apply, remap bool) (bool, error) {
 	}
 	for i, s := range segs {
 		got, err := readAt(f, t.Entry+int64(s.Start), s.Length)
-		if err != nil || !segMatches(t, apply, got, other[i]) {
+		if err != nil || !bytes.Equal(got, other[i].Data) {
 			return false, nil
 		}
 	}
@@ -308,7 +267,7 @@ func detectState(game string) string {
 			return "malik"
 		}
 	case princeOff:
-		if quickAll(game, allJobs(), true, false) {
+		if quickAll(game, jobsFor(true), true, false) {
 			return "original"
 		}
 		var mj *Job
@@ -367,7 +326,7 @@ func prepare(game string, t *Job, apply, remap bool) (*prepared, error) {
 	out := make([]byte, 0, lenTo+16)
 	cur := 0
 	for i, s := range segs {
-		if !segMatches(t, apply, old[s.Start:s.Start+s.Length], other[i]) {
+		if !bytes.Equal(old[s.Start:s.Start+s.Length], other[i].Data) {
 			return nil, merr("%s: кусок данных не совпал с ожидаемым ("+needRU+"). Возможно, другая версия игры.",
 				"%s: a data block does not match ("+needEN+"). Possibly a different game version.", t.Archive)
 		}
@@ -418,7 +377,15 @@ func writeJob(game string, t *Job, apply, remap bool) error {
 	return f.Close()
 }
 
-func checkWritable(game string) error {
+func checkWritable(game string, needData bool) error {
+	if !dirWritable(game) {
+		return &AccessErr{ModErr{
+			"Нет доступа на запись в папку игры. Закройте игру и запустите установщик от имени администратора.",
+			"Cannot write to the game folder. Close the game and run the installer as administrator."}}
+	}
+	if !needData {
+		return nil
+	}
 	for _, n := range requiredFiles {
 		f, err := os.OpenFile(filepath.Join(game, n), os.O_RDWR, 0)
 		if err != nil {
@@ -472,7 +439,7 @@ func doRestore(game string, log Logf) error {
 		return merr("После отката файлы не совпали с оригиналом. Проверьте целостность файлов в Steam.",
 			"After restore the files do not match the originals. Verify game files in Steam.")
 	}
-	log("Готово: оригинал возвращён.", "Done: original files restored.")
+	log("Файлы игры возвращены в оригинал.", "Game files restored to the originals.")
 	return nil
 }
 
@@ -480,6 +447,14 @@ func doInstall(game string, malik bool, log Logf) error {
 	st := detectState(game)
 	if st == "bad_folder" {
 		return merr("Это не папка игры.", "This is not the game folder.")
+	}
+	wantNow := "prince"
+	if malik {
+		wantNow = "malik"
+	}
+	if st == wantNow {
+		log("Правки таймингов уже установлены.", "The timing patch is already installed.")
+		return nil
 	}
 	if st == "prince" || st == "malik" {
 		log("Мод уже установлен - сначала возвращаю оригинал.", "The mod is already installed - restoring originals first.")
@@ -506,6 +481,6 @@ func doInstall(game string, malik bool, log Logf) error {
 		return merr("Установка завершилась, но проверка не прошла. Нажмите «Вернуть всё назад».",
 			"Install finished but verification failed. Press 'Restore everything'.")
 	}
-	log("Готово: мод установлен ("+ruM+").", "Done: mod installed ("+enM+").")
+	log("Тайминги установлены ("+ruM+").", "Timing patch installed ("+enM+").")
 	return nil
 }

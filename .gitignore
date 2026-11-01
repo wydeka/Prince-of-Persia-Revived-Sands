@@ -1,7 +1,14 @@
-# game data and build output are not part of the repository
-cfg.json
+# build output
 *.exe
-*.forge
-*.carve
-*.bin
-discord.txt
+*.dll
+Output/
+installer/payload/
+# logs and dumps written by the developer build
+revived_log.txt
+revived_trace.txt
+revived_entities.txt
+revived_fights.csv
+revived_dump*
+*.log
+*.lib
+*.pdb
